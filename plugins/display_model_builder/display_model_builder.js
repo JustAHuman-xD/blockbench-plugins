@@ -26,7 +26,7 @@
         }
     }
 
-    let format, action, panel, property
+    let format, action, panel, property, dialog, material_data
 
     Plugin.register(id, {
         title: name,
@@ -39,6 +39,8 @@
         variant: "both",
         creation_data: "2023-09-02",
         async onload() {
+
+            material_data = await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/materials.json").then(e => e.json());
 
             format = new ModelFormat({
                 id: "display_model",
@@ -61,7 +63,7 @@
                         template: `
                         <div style="display:flex;flex-direction:column;height:100%">
                             <p class="format_description">${description}</p>
-                            <p class="format_target"><b>Target</b> : <span>Logos</span> <span>Renders</span> <span>Thumbnails</span></p>
+                            <p class="format_target"><b>Minecraft</b> : <span>Model</span> <span>Renders</span> <span>Entity</span></p>
                             <content>
                             <h3 class="markdown">What is this:</h3>
                             <p class="markdown">
@@ -128,6 +130,14 @@
                     `
                 }
             });
+
+            dialog = new Dialog({
+                title: "Change Material",
+                id: "material_dialog",
+                onConfirm(result) {
+                    
+                }
+            })
 
             property = new Property(Cube, 'string', 'material', {
                 default: "stone",
