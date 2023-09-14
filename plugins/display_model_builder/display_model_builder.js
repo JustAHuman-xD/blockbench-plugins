@@ -95,7 +95,7 @@
                     Project.texture_width = 0
                     Project.texture_height = 0
                 }
-            })
+            });
 
             panel = new Panel("display_model_code_panel", {
                 name: "Model Code",
@@ -127,7 +127,7 @@
                         </div>
                     `
                 }
-            })
+            });
 
             property = new Property(Cube, 'string', 'material', {
                 default: "stone",
@@ -137,12 +137,21 @@
             action = new Action("change_material", {
                 name: "Change Material",
                 description: "Change the material of the cube, this is used for the generated block display!",
-                icon,
+                icon: icon,
+                linked_setting: 'material',
                 condition: {
                     formats: [format.id]
+                },
+                click(event) {
+                    // Todo add the actual dialog prompt so you can do stuff
+                    let newMaterial = "grass_block";
+                    Cube.selected.forEach(obj => {
+                        if (obj instanceof Cube) {
+                            obj.material = newMaterial;
+                        }
+                    })
                 }
-                
-            })
+            });
 
             Cube.prototype.menu.addAction(action, 8)
 
