@@ -134,8 +134,18 @@
             dialog = new Dialog({
                 title: "Change Material",
                 id: "material_dialog",
-                onConfirm(result) {
-                    
+                form: {
+                    material: {label: "Material", type: "select", options: generateMaterialOptions()}
+                },
+                onConfirm(form_data) {
+                    let new_material = form_data.material;
+                    let model = getModel(new_material);
+                    let cubeModel = getCubeModel(model);
+                    let textures = getTextures(new_material);
+                    Cube.selected.forEach(obj => {
+                        obj.material = new_material;
+                    })
+                    panel.vue.text = "material: " + String(new_material) + "\nmodel: " + String(JSON.stringify(model)) + "\ncubemodel: " + String(JSON.stringify(cubeModel)) + "\ntextures: " + String(Array.from(textures).join(' '))
                 }
             })
 
@@ -153,13 +163,7 @@
                     formats: [format.id]
                 },
                 click(event) {
-                    // Todo add the actual dialog prompt so you can do stuff
-                    let newMaterial = "grass_block";
-                    Cube.selected.forEach(obj => {
-                        if (obj instanceof Cube) {
-                            obj.material = newMaterial;
-                        }
-                    })
+                    dialog.show();
                 }
             });
 
@@ -176,6 +180,31 @@
 
             function nameToId(name) {
                 return name.toLowerCase().replaceAll(" ", "_");
+            }
+
+            function generateMaterialOptions() {
+                let options = {}
+                for (let key in material_data) {
+                    options[key] = key.substring(0, 1).toUpperCase() + key.substring(1).replaceAll("_", " ");
+                }
+                return options;
+            }
+
+            async function getModel(material) {
+                return fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/models/" + material + ".json").then(e => e.json());
+            }
+
+            async function getCubeModel(model) {
+                let parent = model["parent"].substring(16) + ".json"
+                return fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
+            }
+
+            async function getTextures(material) {
+                let textures = new Set();
+                for (let path in material_data[material]) {
+                    textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/" + path);
+                }
+                return textures;
             }
 
             function generateCode() {
