@@ -142,9 +142,19 @@
                     let model = await getModel(new_material);
                     let cubeModel = await getCubeModel(model);
                     let textures = getTextures(new_material);
-                    Cube.selected.forEach(obj => {
-                        obj.material = new_material;
+
+                    let i = 0;
+                    for (let texture in textures) {
+                        new Texture({name: new_material + i}).fromDataURL(await getBase64FromUrl(texture)).add();
+                        i = i + 1;
+                    }
+                    
+                    Cube.selected.forEach(cube => {
+                        cube.material = new_material;
                     })
+
+                    panel.vue.text = String(JSON.stringify(cubeModel));
+                    //updatePanel();
                 }
             })
 
