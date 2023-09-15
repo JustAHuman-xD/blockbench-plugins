@@ -184,9 +184,9 @@
 
             function generateMaterialOptions() {
                 let options = {}
-                for (let material in material_data) {
+                material_data.forEach(material => {
                     options[material] = material.substring(0, 1).toUpperCase() + material.substring(1).replaceAll("_", " ");
-                }
+                })
                 return options;
             }
 
