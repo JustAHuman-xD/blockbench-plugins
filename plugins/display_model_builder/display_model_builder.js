@@ -137,15 +137,14 @@
                 form: {
                     material: {label: "Material", type: "select", options: generateMaterialOptions()}
                 },
-                onConfirm(form_data) {
+                async onConfirm(form_data) {
                     let new_material = form_data.material;
-                    let model = getModel(new_material);
-                    let cubeModel = getCubeModel(model);
+                    let model = await getModel(new_material);
+                    let cubeModel = await getCubeModel(model);
                     let textures = getTextures(new_material);
                     Cube.selected.forEach(obj => {
                         obj.material = new_material;
                     })
-                    panel.vue.text = "material: " + String(new_material) + "\nmodel: " + String(JSON.stringify(model)) + "\ncubemodel: " + String(JSON.stringify(cubeModel)) + "\ntextures: " + String(Array.from(textures).join(' '))
                 }
             })
 
@@ -191,15 +190,15 @@
             }
 
             async function getModel(material) {
-                return fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/models/" + material + ".json").then(e => e.json());
+                return await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/models/" + material + ".json").then(e => e.json());
             }
 
             async function getCubeModel(model) {
-                let parent = model["parent"].substring(16) + ".json"
-                return fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
+                let parent = model["parent"];
+                return await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
             }
 
-            async function getTextures(model) {
+            function getTextures(model) {
                 let textures = new Set();
                 for (let path in model["textures"]) {
                     textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/textures/" + path);
