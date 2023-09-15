@@ -184,8 +184,8 @@
 
             function generateMaterialOptions() {
                 let options = {}
-                for (let key in material_data) {
-                    options[key] = key.substring(0, 1).toUpperCase() + key.substring(1).replaceAll("_", " ");
+                for (let material in material_data) {
+                    options[material] = material.substring(0, 1).toUpperCase() + material.substring(1).replaceAll("_", " ");
                 }
                 return options;
             }
@@ -199,10 +199,10 @@
                 return fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
             }
 
-            async function getTextures(material) {
+            async function getTextures(model) {
                 let textures = new Set();
-                for (let path in material_data[material]) {
-                    textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/" + path);
+                for (let path in model["textures"]) {
+                    textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/textures/" + path);
                 }
                 return textures;
             }
