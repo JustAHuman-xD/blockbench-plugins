@@ -25,6 +25,16 @@
             colour: "#FF4444"
         }
     }
+    const getBase64FromUrl = url => { 
+        return new Promise(async (resolve) => {
+          const reader = new FileReader()
+          reader.readAsDataURL(await (await fetch(url)).blob())
+          reader.onloadend = () => {
+            const base64data = reader.result
+            resolve(base64data)
+          }
+        })
+      }
 
     let format, action, panel, property, dialog, material_data
 
@@ -140,26 +150,28 @@
                 async onConfirm(form_data) {
                     let new_material = form_data.material;
                     let model = await getModel(new_material);
-                    let cubeModel = await getCubeModel(model);
-                    let textures = getTextures(new_material);
+                    let cube_model = await getCubeModel(model);
+                    let textures = await getTextures(model);
 
-                    let i = 0;
-                    for (let texture in textures) {
-                        new Texture({name: new_material + i}).fromDataURL(await getBase64FromUrl(texture)).add();
-                        i = i + 1;
-                    }
+                    textures.forEach(async texture_path => {
+                        let texture_name = texture_path.substring(91);
+                        let texture = new Texture({name: texture_name}).fromDataURL(await getBase64FromUrl(texture_path)).add();
+                        
+                        Cube.selected.forEach(async cube => {
+                            cube.applyTexture(texture, await getFaces(cube_model, model, texture_name));
+                        })
+                    })
                     
-                    Cube.selected.forEach(cube => {
+                    Cube.selected.forEach(async cube => {
                         cube.material = new_material;
                     })
 
-                    panel.vue.text = String(JSON.stringify(cubeModel));
-                    //updatePanel();
+                    updatePanel();
                 }
             })
 
             property = new Property(Cube, 'string', 'material', {
-                default: "stone",
+                default: "grass_block",
                 exposed: true
             });
 
@@ -208,12 +220,45 @@
                 return await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
             }
 
-            function getTextures(model) {
+            async function getTextures(model) {
                 let textures = new Set();
-                for (let path in model["textures"]) {
-                    textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/textures/" + path);
+                textures.add(JSON.stringify(model));
+                for (path in model["textures"]) {
+                    textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/textures/" + model["textures"][path]);
                 }
                 return textures;
+            }
+
+            async function getFaces(cube_model, model, texture_name) {
+                let texture_names = new Set();
+                let faces = new Array();
+                for (path in model["textures"]) {
+                    if (model["textures"][path] == texture_name) {
+                        texture_names.add("#" + path);
+                    }
+                }
+
+                for (face in cube_model["textures"]) {
+                    if (texture_names.has(cube_model["textures"][face])) {
+                        faces.push(face)
+                    }
+                }
+
+                let elements = cube_model["elements"];
+                for (element in elements) {
+                    for (face in element["faces"]) {
+                        if (element["faces"][face]["texture"] in texture_names) {
+                            faces.push(face)
+                        }
+                    }
+                }
+                
+                let particleIndex = faces.indexOf("particle");
+                if (particleIndex > -1) { // only splice array when item is found
+                    faces.splice(particleIndex, 1); // 2nd parameter means remove one item only
+                }
+
+                return faces;
             }
 
             function generateCode() {
