@@ -5,6 +5,7 @@
     const icon = "check_box_outline_blank"
     const author = "JustAHuman"
     const description = "Create Display Entity Models!"
+    const texture_cache = new Map();
     const links = {
         github: {
             text: "By JustAHuman",
@@ -34,9 +35,9 @@
             resolve(base64data)
           }
         })
-      }
+    }
 
-    let format, action, panel, property, dialog, material_data
+    let format, action, panel, property, dialog, material_data, cleanup
 
     Plugin.register(id, {
         title: name,
@@ -68,7 +69,7 @@
                 format_page: {
                     component: {
                         methods: { 
-                        create: () => format.new()
+                            create: () => format.new()
                         },
                         template: `
                         <div style="display:flex;flex-direction:column;height:100%">
@@ -128,11 +129,6 @@
                         text: `// There is nothing to display!
 // Try adding some cubes to get started!`
                     },
-                    methods: {
-                        update() {
-
-                        }
-                    },
                     template: `
                         <div>
                             <vue-prism-editor v-model="text" language="json" readonly=true line-numbers />
@@ -148,30 +144,12 @@
                     material: {label: "Material", type: "select", options: generateMaterialOptions()}
                 },
                 async onConfirm(form_data) {
-                    let new_material = form_data.material;
-                    let model = await getModel(new_material);
-                    let cube_model = await getCubeModel(model);
-                    let textures = await getTextures(model);
-
-                    textures.forEach(async texture_path => {
-                        let texture_name = texture_path.substring(91);
-                        let texture = new Texture({name: texture_name}).fromDataURL(await getBase64FromUrl(texture_path)).add();
-                        
-                        Cube.selected.forEach(async cube => {
-                            cube.applyTexture(texture, await getFaces(cube_model, model, texture_name));
-                        })
-                    })
-                    
-                    Cube.selected.forEach(async cube => {
-                        cube.material = new_material;
-                    })
-
-                    updatePanel();
+                    setSelectedCubesMaterial(form_data.material);
                 }
             })
 
             property = new Property(Cube, 'string', 'material', {
-                default: "grass_block",
+                default: "air",
                 exposed: true
             });
 
@@ -183,19 +161,27 @@
                 condition: {
                     formats: [format.id]
                 },
-                click(event) {
+                async click(event) {
                     dialog.show();
                 }
             });
 
             Cube.prototype.menu.addAction(action, 8)
 
+            Blockbench.on("add_cube", updateCube)
             Blockbench.on("finished_edit", updatePanel)
+
+            function updateCube() {
+                setSelectedCubesMaterial("stone");
+            }
 
             function updatePanel() {
                 if (Project.format?.id == "display_model") {
-                    let code = generateCode();
-                    panel.vue.text = code;
+                    panel.vue.text = generateCode();
+                    if (cleanup) {
+                        cleanupTextures();
+                        cleanup = false;
+                    }
                 }
             }
 
@@ -205,46 +191,107 @@
 
             function generateMaterialOptions() {
                 let options = {}
-                material_data.forEach(material => {
+                material_data.forEach(async material => {
                     options[material] = material.substring(0, 1).toUpperCase() + material.substring(1).replaceAll("_", " ");
                 })
                 return options;
+            }
+
+            async function setSelectedCubesMaterial(material) {
+                let model = await getModel(material);
+                let parent_model = await getParentModel(model);
+                let textures = await getTextures(model);
+
+                textures.forEach(async texture_path => {
+                    let texture = await getOrCreateTexture(texture_path);
+                    let texture_name = texture.name;
+                    await Cube.selected.forEach(async cube => {
+                        cube.applyTexture(texture, await getFaces(parent_model, model, texture_name, new Set(), new Array()));
+                    })
+                })
+                
+                await Cube.selected.forEach(async cube => {
+                    cube.material = material;
+                    for (let face in cube.faces) {
+                        let cube_face = cube.faces[face];
+                        cube_face.uv[2] = 16;
+                        cube_face.uv[3] = 16;
+                    }
+                    cube.autouv = 0;
+                    Canvas.updateUV(cube);
+                })
+
+                updatePanel();
+                cleanup = true;
             }
 
             async function getModel(material) {
                 return await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/models/" + material + ".json").then(e => e.json());
             }
 
-            async function getCubeModel(model) {
+            async function getParentModel(model) {
                 let parent = model["parent"];
                 return await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/parents/" + parent).then(e => e.json());
             }
 
             async function getTextures(model) {
                 let textures = new Set();
-                textures.add(JSON.stringify(model));
                 for (path in model["textures"]) {
                     textures.add("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/textures/" + model["textures"][path]);
                 }
                 return textures;
             }
 
-            async function getFaces(cube_model, model, texture_name) {
-                let texture_names = new Set();
-                let faces = new Array();
+            async function getOrCreateTexture(texture_path) {
+                let texture_name = texture_path.substring(texture_path.lastIndexOf("/") + 1);
+                
+                if (texture_cache.has(texture_name)) {
+                    return texture_cache.get(texture_name);
+                }
+
+                let base64 = await getBase64FromUrl(texture_path);
+                let texture = new Texture({name: texture_name}).fromDataURL(base64).add();
+                texture_cache.set(texture_name, texture);
+
+                return texture;
+            }
+
+            function cleanupTextures() {
+                let used_textures = new Set();
+                Cube.selected.forEach(cube => {
+                    for (let face in cube.faces) {
+                        let texture = cube.faces[face].getTexture();
+                        used_textures.add(texture.name)
+                    }
+                })
+
+                let to_remove = new Set();
+                texture_cache.forEach((texture, texture_name) => {
+                    if (!used_textures.has(texture_name)) {
+                        to_remove.add(texture_name);
+                        texture.remove(true);
+                    }
+                })
+
+                to_remove.forEach(texture_name => {
+                    texture_cache.delete(texture_name);
+                })
+            }
+
+            async function getFaces(parent_model, model, texture_name, texture_names, faces) {
                 for (path in model["textures"]) {
                     if (model["textures"][path] == texture_name) {
                         texture_names.add("#" + path);
                     }
                 }
 
-                for (face in cube_model["textures"]) {
-                    if (texture_names.has(cube_model["textures"][face])) {
-                        faces.push(face)
+                for (face in parent_model["textures"]) {
+                    if (texture_names.has(parent_model["textures"][face])) {
+                        faces.push(face);
                     }
                 }
 
-                let elements = cube_model["elements"];
+                let elements = parent_model["elements"];
                 for (element in elements) {
                     for (face in element["faces"]) {
                         if (element["faces"][face]["texture"] in texture_names) {
@@ -254,11 +301,16 @@
                 }
                 
                 let particleIndex = faces.indexOf("particle");
-                if (particleIndex > -1) { // only splice array when item is found
-                    faces.splice(particleIndex, 1); // 2nd parameter means remove one item only
+                if (particleIndex > -1) {
+                    faces.splice(particleIndex, 1);
                 }
 
-                return faces;
+                let parent_model_parent = parent_model["parent"];
+                if (parent_model_parent == undefined || parent_model_parent == "block.json") {
+                    return faces;
+                }
+
+                return await getFaces(getParentModel(parent_model), parent_model, texture_name, texture_names, faces);
             }
 
             function generateCode() {
