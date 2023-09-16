@@ -4,7 +4,7 @@
     const name = "Display Model Builder"
     const icon = "check_box_outline_blank"
     const author = "JustAHuman"
-    const description = "Create Display Entity Models!"
+    const description = "Display Model for plugin developers of Minecraft Java Edition"
     const texture_cache = new Map();
     const links = {
         github: {
@@ -54,18 +54,12 @@
             material_data = await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/materials.json").then(e => e.json());
 
             display_model_format = new ModelFormat({
+                icon,
                 id: "display_model",
                 name: "Display Model",
-                icon,
                 category: "minecraft",
-                target: ["Minecraft"],
-                model_identifier: false,
-                rotate_cubes: true,
-                uv_rotation: false,
-                bone_rig: true,
-                centered_grid: true,
-                edit_mode: true,
-                paint_mode: false,
+                description: "Display Model for plugin developers of Minecraft Java Edition.",
+                target: ["Minecraft: Java Edition (Plugins)", "Plugin Developers", "Minecraft Server Owners"],
                 format_page: {
                     component: {
                         methods: { 
@@ -74,25 +68,18 @@
                         template: `
                         <div style="display:flex;flex-direction:column;height:100%">
                             <p class="format_description">${description}</p>
-                            <p class="format_target"><b>Minecraft</b> : <span>Model</span> <span>Renders</span> <span>Entity</span></p>
+                            <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition (Plugins)</span> <span>Plugin Developers</span> <span>Server Owners</span></p>
                             <content>
-                            <h3 class="markdown">What is this:</h3>
-                            <p class="markdown">
-                                <ul>
-                                <li>This format is designed to create complex models using the new Display Entities!</li>
-                                <li>This format will use block entities to best replicate whatever model you create</li>
-                                <li>Keep in mind you are limited to the textures of exisiting minecraft blocks, no custom textures</li>
-                                <li>When you are ready to export the plugin will give you the corresponding Model Types and Parameters to feed into DisplayModelLib!</li>
-                                </ul>
-                            </p>
+                                <h3 class="markdown">Good to know:</h3>
+                                <p class="markdown">
+                                    <ul>
+                                        <li>This format is designed to turn cuboid models into code loadable using <a href="https://github.com/LordIdra/DisplayModelLib" target="_blank">DisplayModel-Lib</a></li>
+                                        <li>A cuboid with a size of 1, 1, 1 is the size of the default minecraft block</li>
+                                        <li>You can change a cuboids material by right clicking and selecting change material!</li>
+                                    </ul>
+                                </p>
                             </content>
                             <div class="spacer"></div>
-                            <div class="display-model-links">${Object.values(links).map(e => `
-                            <a href="${e.link}">
-                                ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
-                                <p>${e.text}</p>
-                            </a>
-                            `).join("")}</div>
                             <div class="button_bar">
                                 <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="create">
                                     <i class="material-icons">${icon}</i>
@@ -103,6 +90,15 @@
                         `
                     }
                 },
+                model_identifier: false,
+                rotate_cubes: true,
+                uv_rotation: false,
+                bone_rig: true,
+                centered_grid: true,
+                edit_mode: true,
+                paint_mode: false,
+                animation_mode: false,
+                pose_mode: false,
                 new() {
                     newProject(this)
                     Project.texture_width = 16
