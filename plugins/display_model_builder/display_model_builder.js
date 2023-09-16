@@ -73,6 +73,7 @@
                                 <h3 class="markdown">Good to know:</h3>
                                 <p class="markdown">
                                     <ul>
+                                        <li>You need an internet connection to use this, its required to fetch the models and textures necessary to function!</li>
                                         <li>This format is designed to turn cuboid models into code loadable using <a href="https://github.com/LordIdra/DisplayModelLib" target="_blank">DisplayModel-Lib</a></li>
                                         <li>A cuboid with a size of 1, 1, 1 is the size of the default minecraft block</li>
                                         <li>You can change a cuboids material by right clicking and selecting change material!</li>
@@ -197,6 +198,11 @@
             Blockbench.on("finished_edit", updatePanel)
 
             function updateCube() {
+                Cube.selected.forEach(cube => {
+                    cube.resize(-1, 0);
+                    cube.resize(-1, 1);
+                    cube.resize(-1, 2);
+                })
                 setSelectedCubesMaterial("stone");
             }
 

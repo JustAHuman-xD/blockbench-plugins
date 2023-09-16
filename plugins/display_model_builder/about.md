@@ -1,4 +1,6 @@
 This plugin adds a new format that allows you to create Models and convert them into code that can be loaded using [DisplayModel-Lib](https://github.com/LordIdra/DisplayModelLib)! If you haven't already checked out DisplayModel-Lib before hand, it is highly reccomended to start there first!
+## Requirements
+The only requirement is an internet connection! This plugin fetches textures and models from github to properly function, without an internet connection, it can't do that!
 ## Getting Started
 To use this plugin, start by creating a new **Display Model** project from the start screen, or go to **File > New > Display Model**. You can then begin creating your model! Remember that you are **limited** to **vanilla textures**, as this functions on vanilla functionality.
 <br><br>
