@@ -37,7 +37,7 @@
         })
     }
 
-    let format, action, panel, property, dialog, material_data, cleanup
+    let display_model_format, model_code_toolbar, copy_model_code_action, model_code_yml_toggle, model_code_panel, change_material_action, change_material_dialog, material_data, texture_cleanup
 
     Plugin.register(id, {
         title: name,
@@ -53,7 +53,7 @@
 
             material_data = await fetch("https://raw.githubusercontent.com/JustAHuman-xD/DisplayModelBuilderData/main/data/materials.json").then(e => e.json());
 
-            format = new ModelFormat({
+            display_model_format = new ModelFormat({
                 id: "display_model",
                 name: "Display Model",
                 icon,
@@ -69,7 +69,7 @@
                 format_page: {
                     component: {
                         methods: { 
-                            create: () => format.new()
+                            create: () => display_model_format.new()
                         },
                         template: `
                         <div style="display:flex;flex-direction:column;height:100%">
@@ -94,10 +94,10 @@
                             </a>
                             `).join("")}</div>
                             <div class="button_bar">
-                            <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="create">
-                                <i class="material-icons">${icon}</i>
-                                Create New Display Model
-                            </button>
+                                <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="create">
+                                    <i class="material-icons">${icon}</i>
+                                    Create New Display Model
+                                </button>
                             </div>
                         </div>
                         `
@@ -105,29 +105,57 @@
                 },
                 new() {
                     newProject(this)
-                    Project.texture_width = 0
-                    Project.texture_height = 0
+                    Project.texture_width = 16
+                    Project.texture_height = 16
                 }
             });
 
-            panel = new Panel("display_model_code_panel", {
+            copy_model_code_action = new Action("copy_model_code", {
+                name: "Copy Model Code",
+                description: "Copy the display model code to the clipboard",
+                icon: "content_copy",
+                click(event) {
+                    Blockbench.showQuickMessage("Copied model code to clipboard!");
+                    navigator.clipboard.writeText(model_code_panel.vue.text);
+                }
+            })
+
+            model_code_yml_toggle = new Toggle("model_code_yml", {
+                name: "Yml Format",
+                description: "Should the model code be yml format?",
+                icon: "description",
+                default: false,
+                onChange: function() {
+                    model_code_panel.vue.yml = !model_code_panel.vue.yml;
+                    updatePanel();
+                }
+            })
+
+            model_code_toolbar = new Toolbar("model_code_toolbar", {
+                id: "model_code_toolbar",
+                children: [copy_model_code_action, model_code_yml_toggle]
+            })
+
+            model_code_panel = new Panel("display_model_code_panel", {
                 name: "Model Code",
                 icon: "code",
                 growable: true,
                 condition: {
-                    formats: [format.id],
+                    formats: [display_model_format.id],
                 },
                 default_position: {
                     folded: true,
                     slot: "bottom"
                 },
+                toolbars: [model_code_toolbar],
                 component: {
                     components: {
                         VuePrismEditor
                     },
                     data: {
                         text: `// There is nothing to display!
-// Try adding some cubes to get started!`
+// Try adding some cubes to get started!`,
+                        yml: false
                     },
                     template: `
                         <div>
@@ -137,7 +165,25 @@
                 }
             });
 
-            dialog = new Dialog({
+            new Property(Cube, 'string', 'material', {
+                default: "air",
+                exposed: true
+            });
+
+            change_material_action = new Action("change_cube_material", {
+                name: "Change Material",
+                description: "Change the material of the cube, this is used for the generated block display!",
+                icon: icon,
+                linked_setting: 'material',
+                condition: {
+                    formats: [display_model_format.id]
+                },
+                async click(event) {
+                    change_material_dialog.show();
+                }
+            });
+
+            change_material_dialog = new Dialog({
                 title: "Change Material",
                 id: "material_dialog",
                 form: {
@@ -147,26 +193,9 @@
                     setSelectedCubesMaterial(form_data.material);
                 }
             })
+            
 
-            property = new Property(Cube, 'string', 'material', {
-                default: "air",
-                exposed: true
-            });
-
-            action = new Action("change_material", {
-                name: "Change Material",
-                description: "Change the material of the cube, this is used for the generated block display!",
-                icon: icon,
-                linked_setting: 'material',
-                condition: {
-                    formats: [format.id]
-                },
-                async click(event) {
-                    dialog.show();
-                }
-            });
-
-            Cube.prototype.menu.addAction(action, 8)
+            Cube.prototype.menu.addAction(change_material_action, 8)
 
             Blockbench.on("add_cube", updateCube)
             Blockbench.on("finished_edit", updatePanel)
@@ -177,10 +206,10 @@
 
             function updatePanel() {
                 if (Project.format?.id == "display_model") {
-                    panel.vue.text = generateCode();
-                    if (cleanup) {
+                    model_code_panel.vue.text = generateCode();
+                    if (texture_cleanup) {
                         cleanupTextures();
-                        cleanup = false;
+                        texture_cleanup = false;
                     }
                 }
             }
@@ -223,7 +252,7 @@
                 })
 
                 updatePanel();
-                cleanup = true;
+                texture_cleanup = true;
             }
 
             async function getModel(material) {
@@ -315,7 +344,7 @@
             }
 
             function generateCode() {
-                let code = `new ModelBuilder()`;
+                let code = "";
                 let elements = Project.elements;
                 if (elements.length == 0) {
                     return `// There is nothing to display!
@@ -337,6 +366,12 @@
 // Change the names to remove duplicates!`
                 }
 
+                if (!model_code_panel.vue.yml) {
+                    code = "new ModelBuilder()";
+                } else {
+                    code = `${Project.name != "" ? nameToId(Project.name) : "display_model"}:`
+                }
+
                 elements.forEach(element => {
                     let from = element.from;
                     let to = element.to;
@@ -346,12 +381,21 @@
                     let material = element.material.toUpperCase();
                     let id = nameToId(element.name);
 
-                    code = code + `
+                    if (!model_code_panel.vue.yml) {
+                        code = code + `
     .add(\"${id}\", new ModelCuboid()
         .material(Material.${material})
         .size(${scale[0]}, ${scale[1]}, ${scale[2]})
         .position(${position[0]}, ${position[1]}, ${position[2]})
         .rotation(${rotation.x}, ${rotation.y}, ${rotation.z}))`
+                    } else {
+                        code = code + `
+    ${id}:
+        material: ${material}
+        size: [${scale[0]}, ${scale[1]}, ${scale[2]}]
+        position: [${position[0]}, ${position[1]}, ${position[2]}]
+        rotation: [${rotation.x}, ${rotation.y}, ${rotation.z}]`
+                    }
                 })
 
                 return code
