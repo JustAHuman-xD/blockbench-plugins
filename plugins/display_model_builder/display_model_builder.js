@@ -6,26 +6,6 @@
     const author = "JustAHuman"
     const description = "Display Model for plugin developers of Minecraft Java Edition"
     const texture_cache = new Map();
-    const links = {
-        github: {
-            text: "By JustAHuman",
-            link: "https://github.com/JustAHuman-xD",
-            icon: "fab.fa-github",
-            colour: "#6E40C9"
-        },
-        discord: {
-            text: "Discord Server",
-            link: "https://discord.gg/y6fV6pbgHB",
-            icon: "fab.fa-discord",
-            colour: "#727FFF"
-        },
-        tutorial: {
-            text: "Tutorial",
-            link: "https://youtube.com",
-            icon: "fab.fa-youtube",
-            colour: "#FF4444"
-        }
-    }
     const getBase64FromUrl = url => { 
         return new Promise(async (resolve) => {
           const reader = new FileReader()
