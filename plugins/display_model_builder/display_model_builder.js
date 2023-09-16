@@ -207,6 +207,7 @@
                     let texture_name = texture.name;
                     await Cube.selected.forEach(async cube => {
                         cube.applyTexture(texture, await getFaces(parent_model, model, texture_name, new Set(), new Array()));
+                        Canvas.updateUV(cube);
                     })
                 })
                 
