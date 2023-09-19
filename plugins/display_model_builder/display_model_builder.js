@@ -17,7 +17,7 @@
         })
     }
 
-    let display_model_format, model_code_toolbar, copy_model_code_action, model_code_yml_toggle, model_code_panel, change_material_action, change_material_dialog, material_data, texture_cleanup
+    let display_model_format, import_display_model_action, import_display_model_dialog, model_code_toolbar, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle, model_code_panel, change_material_action, change_material_dialog, material_data, texture_cleanup
 
     Plugin.register(id, {
         title: name,
@@ -81,18 +81,41 @@
                 animation_mode: false,
                 pose_mode: false,
                 new() {
-                    newProject(this)
-                    Project.texture_width = 16
-                    Project.texture_height = 16
+                    newProject(this);
+                    Project.texture_width = 16;
+                    Project.texture_height = 16;
                 }
             });
+
+            import_display_model_action = new Action("import_display_model_action", {
+                name: "Import Display model",
+                description: "Imports a Display Model from the code used to create it",
+                icon: "publish",
+                click(event) {
+                    import_display_model_dialog.show();
+                }
+            })
+
+            import_display_model_dialog = new Dialog({
+                title: "Import Display Model",
+                id: "import_display_model_dialog",
+                form: {
+                    code: {label: "Code", type: "textarea"}
+                },
+                async onConfirm(form_data) {
+                    importDisplayModel(form_data.code);
+                    form_data.code = ""
+                }
+            })
 
             copy_model_code_action = new Action("copy_model_code", {
                 name: "Copy Model Code",
                 description: "Copy the display model code to the clipboard",
                 icon: "content_copy",
                 click(event) {
+                    log_code_generation = true;
                     Blockbench.showQuickMessage("Copied model code to clipboard!");
+                    updatePanel();
                     navigator.clipboard.writeText(model_code_panel.vue.text);
                 }
             })
@@ -108,9 +131,20 @@
                 }
             })
 
+            model_code_scale_factor_toggle = new Toggle("model_code_scale", {
+                name: "Toggle Scaling Factor",
+                decription: "Should the model be scaled down when generating the code (BlockBench Scale -> Display Model Scale)",
+                icon: "zoom_out_map",
+                default: false,
+                onChange: function() {
+                    model_code_panel.vue.scale_factor = !model_code_panel.vue.scale_factor;
+                    updatePanel();
+                }
+            })
+
             model_code_toolbar = new Toolbar("model_code_toolbar", {
                 id: "model_code_toolbar",
-                children: [copy_model_code_action, model_code_yml_toggle]
+                children: [import_display_model_action, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle]
             })
 
             model_code_panel = new Panel("display_model_code_panel", {
@@ -132,7 +166,8 @@
                     data: {
                         text: `// There is nothing to display!
 // Try adding some cubes to get started!`,
-                        yml: false
+                        yml: false,
+                        scale_factor: false
                     },
                     template: `
                         <div>
@@ -171,11 +206,10 @@
                 }
             })
             
+            Cube.prototype.menu.addAction(change_material_action, 8);
 
-            Cube.prototype.menu.addAction(change_material_action, 8)
-
-            Blockbench.on("add_cube", updateCube)
-            Blockbench.on("finished_edit", updatePanel)
+            Blockbench.on("add_cube", updateCube);
+            Blockbench.on("finished_edit", updatePanel);
 
             function updateCube() {
                 Cube.selected.forEach(cube => {
@@ -196,6 +230,109 @@
                 }
             }
 
+            function importDisplayModel(code) {
+                let lines = code.split("\n");
+                if (lines.includes("new ModelBuilder()")) {
+                    importFromJava(lines);
+                } else {
+                    importFromYml(lines);
+                }
+            }
+
+            function importFromJava(lines) {
+                lines.forEach(line => {
+                    let i = lines.findIndex(other_line => {
+                        return other_line == line;
+                    });
+
+                    if (!line.includes(".add") || lines.length < i + 4) {
+                        return;
+                    }
+
+                    let material_line = lines[i + 1];
+                    let size_line = lines[i + 2];
+                    let location_line = lines[i + 3];
+                    let rotation_line = lines[i + 4];
+
+                    let name = line.substring(line.indexOf("\"") + 1, line.lastIndexOf("\""));
+                    let material = material_line.substring(material_line.lastIndexOf(".") + 1, material_line.lastIndexOf(")")).toLowerCase();
+                    let size = vectorFromString(size_line, "(", ")");
+                    let location = vectorFromString(location_line, "(", ")");
+                    let rotation = vectorFromString(rotation_line, "(", ")");
+                    rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+
+                    buildCube(name, material, size, location, rotation);
+                })
+            }
+
+            function importFromYml(lines) {
+                lines.forEach(line => {
+                    let i = lines.findIndex(other_line => {
+                        return other_line == line;
+                    });
+                    
+                    if (!line.includes("material:") || lines.length < i + 3) {
+                        return;
+                    }
+
+                    let name_line = lines[i - 1];
+                    let size_line = lines[i + 1];
+                    let location_line = lines[i + 2];
+                    let rotation_line = lines[i + 3];
+
+                    let name = name_line.substring(0, line.lastIndexOf(":") + 1).trim();
+                    let material = line.substring(line.lastIndexOf(":") + 1).toLowerCase().trim();
+                    let size = vectorFromString(size_line, "[", "]");
+                    let location = vectorFromString(location_line, "[", "]");
+                    let rotation = vectorFromString(rotation_line, "[", "]");
+                    rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+
+                    buildCube(name, material, size, location, rotation);
+                })
+            }
+
+            function buildCube(name, material, size, location, rotation) {
+                let from = [location[0] - size[0] / 2, location[1] - size[1] / 2, location[2] - size[2] / 2]
+                let to = [location[0] + size[0] / 2, location[1] + size[1] / 2, location[2] + size[2] / 2]
+
+                let cube = new Cube({
+                    autouv: 0,
+                    name: name,
+                    mesh: new THREE.Object3D()
+                });
+
+                cube.from = from;
+                cube.to = to;
+                cube.rotation = rotation;
+                cube.material = material;
+                cube.init();
+
+                setCubesMaterial(material, [cube]);
+            }
+
+            function vectorFromString(container_string, start_character, end_character) {
+                let i = 0;
+                let vector = [];
+                let string = container_string.substring(container_string.lastIndexOf(start_character) + 1, container_string.lastIndexOf(end_character));
+                string.split(",").forEach(piece => {
+                    let i = string.split(",").findIndex(other_piece => {
+                        return other_piece == piece;
+                    });
+
+                    if (i > 2) {
+                        return;
+                    }
+
+                    vector[i] = parseFloat(piece);
+                })
+                
+                return vector;
+            }
+
+            function radiansToDegrees(radians) {
+                return radians * (180 / Math.PI);
+            }
+
             function nameToId(name) {
                 return name.toLowerCase().replaceAll(" ", "_");
             }
@@ -209,6 +346,10 @@
             }
 
             async function setSelectedCubesMaterial(material) {
+                setCubesMaterial(material, Cube.selected);
+            }
+
+            async function setCubesMaterial(material, cubes) {
                 let model = await getModel(material);
                 let parent_model = await getParentModel(model);
                 let textures = await getTextures(model);
@@ -216,13 +357,13 @@
                 textures.forEach(async texture_path => {
                     let texture = await getOrCreateTexture(texture_path);
                     let texture_name = texture.name;
-                    await Cube.selected.forEach(async cube => {
+                    await cubes.forEach(async cube => {
                         cube.applyTexture(texture, await getFaces(parent_model, model, texture_name, new Set(), new Array()));
                         Canvas.updateUV(cube);
                     })
                 })
                 
-                await Cube.selected.forEach(async cube => {
+                await cubes.forEach(async cube => {
                     cube.material = material;
                     for (let face in cube.faces) {
                         let cube_face = cube.faces[face];
@@ -273,7 +414,9 @@
                 Cube.selected.forEach(cube => {
                     for (let face in cube.faces) {
                         let texture = cube.faces[face].getTexture();
-                        used_textures.add(texture.name)
+                        if (texture != null) {
+                            used_textures.add(texture.name)
+                        }
                     }
                 })
 
@@ -358,24 +501,29 @@
                     let from = element.from;
                     let to = element.to;
                     let rotation = element.getMesh().rotation;
-                    let scale = [Math.abs(from[0] - to[0]), Math.abs(from[1] - to[1]), Math.abs(from[2] - to[2])];
-                    let position = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2]
+                    let size = [Math.abs(from[0] - to[0]), Math.abs(from[1] - to[1]), Math.abs(from[2] - to[2])];
+                    let location = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2];
                     let material = element.material.toUpperCase();
                     let id = nameToId(element.name);
+
+                    if (model_code_panel.vue.scale_factor) {
+                        location = [location[0] / 16, location[1] / 16, location[2] / 16]
+                        size = [size[0] / 16, size[1] / 16, size[2] / 16]
+                    }
 
                     if (!model_code_panel.vue.yml) {
                         code = code + `
     .add(\"${id}\", new ModelCuboid()
         .material(Material.${material})
-        .size(${scale[0]}, ${scale[1]}, ${scale[2]})
-        .position(${position[0]}, ${position[1]}, ${position[2]})
+        .size(${size[0]}F, ${size[1]}F, ${size[2]}F)
+        .location(${location[0]}F, ${location[1]}F, ${location[2]}F)
         .rotation(${rotation.x}, ${rotation.y}, ${rotation.z}))`
                     } else {
                         code = code + `
     ${id}:
         material: ${material}
-        size: [${scale[0]}, ${scale[1]}, ${scale[2]}]
-        position: [${position[0]}, ${position[1]}, ${position[2]}]
+        size: [${size[0]}, ${size[1]}, ${size[2]}]
+        location: [${location[0]}, ${location[1]}, ${location[2]}]
         rotation: [${rotation.x}, ${rotation.y}, ${rotation.z}]`
                     }
                 })
