@@ -468,6 +468,10 @@
                 return await getFaces(getParentModel(parent_model), parent_model, texture_name, texture_names, faces);
             }
 
+            function degreesToRadians(degrees) {
+                return degrees * (Math.PI / 180)
+            }
+
             function generateCode() {
                 let code = "";
                 let elements = Project.elements;
@@ -500,7 +504,8 @@
                 elements.forEach(element => {
                     let from = element.from;
                     let to = element.to;
-                    let rotation = element.getMesh().rotation;
+                    let rotationDegrees = element.rotation;
+                    let rotation = [degreesToRadians(rotationDegrees[0]), degreesToRadians(rotationDegrees[1]), degreesToRadians(rotationDegrees[2])];
                     let size = [Math.abs(from[0] - to[0]), Math.abs(from[1] - to[1]), Math.abs(from[2] - to[2])];
                     let location = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2];
                     let material = element.material.toUpperCase();
