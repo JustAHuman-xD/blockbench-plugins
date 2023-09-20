@@ -522,14 +522,14 @@
         .material(Material.${material})
         .size(${size[0]}F, ${size[1]}F, ${size[2]}F)
         .location(${location[0]}F, ${location[1]}F, ${location[2]}F)
-        .rotation(${rotation.x}, ${rotation.y}, ${rotation.z}))`
+        .rotation(${rotation[0]}, ${rotation[1]}, ${rotation[2]}))`
                     } else {
                         code = code + `
     ${id}:
         material: ${material}
         size: [${size[0]}, ${size[1]}, ${size[2]}]
         location: [${location[0]}, ${location[1]}, ${location[2]}]
-        rotation: [${rotation.x}, ${rotation.y}, ${rotation.z}]`
+        rotation: [${rotation[0]}, ${rotation[1]}, ${rotation[2]}]`
                     }
                 })
 
