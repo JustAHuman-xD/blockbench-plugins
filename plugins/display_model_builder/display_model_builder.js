@@ -314,20 +314,17 @@
                 let i = 0;
                 let vector = [];
                 let string = container_string.substring(container_string.lastIndexOf(start_character) + 1, container_string.lastIndexOf(end_character));
-                string.split(",").forEach(piece => {
-                    let i = string.split(",").findIndex(other_piece => {
-                        return other_piece == piece;
-                    });
-
+                for (let piece in string.split(",") {
                     if (i > 2) {
-                        return;
+                        break;
                     }
 
                     vector[i] = parseFloat(piece);
                     if (model_code_panel.vue.scale_factor) {
                         vector[i] = vector[i] * 16
                     }
-                })
+                    i++;
+                }
                 
                 return vector;
             }
