@@ -240,8 +240,7 @@
             }
 
             function importFromJava(lines) {
-                let i = 0;
-                for (let line in lines) {
+                lines.forEach((line, i, ignored) => {
                     if (!line.includes(".add") || lines.length < i + 4) {
                         return;
                     }
@@ -260,12 +259,11 @@
 
                     buildCube(name, material, size, location, rotation);
                     i++;
-                }
+                })
             }
 
             function importFromYml(lines) {
-                let i = 0;
-                for (let line in lines) {    
+                lines.forEach((line, i, ignored) => {
                     if (!line.includes("material:") || lines.length < i + 3) {
                         return;
                     }
@@ -284,7 +282,7 @@
 
                     buildCube(name, material, size, location, rotation);
                     i++;
-                }
+                })
             }
 
             function buildCube(name, material, size, location, rotation) {
@@ -307,10 +305,9 @@
             }
 
             function vectorFromString(container_string, start_character, end_character) {
-                let i = 0;
                 let vector = [];
                 let string = container_string.substring(container_string.lastIndexOf(start_character) + 1, container_string.lastIndexOf(end_character));
-                for (let piece in string.split(",")) {
+                string.split(",").forEach((piece, i, ignored) => {
                     if (i > 2) {
                         break;
                     }
@@ -320,7 +317,7 @@
                         vector[i] = vector[i] * 16
                     }
                     i++;
-                }
+                })
                 
                 return vector;
             }
