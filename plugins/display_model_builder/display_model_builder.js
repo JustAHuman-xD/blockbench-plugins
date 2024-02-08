@@ -309,7 +309,7 @@
                 let string = container_string.substring(container_string.lastIndexOf(start_character) + 1, container_string.lastIndexOf(end_character));
                 string.split(",").forEach((piece, i, ignored) => {
                     if (i > 2) {
-                        break;
+                        return;
                     }
 
                     vector[i] = parseFloat(piece);
