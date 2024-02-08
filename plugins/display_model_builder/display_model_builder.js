@@ -240,11 +240,8 @@
             }
 
             function importFromJava(lines) {
-                lines.forEach(line => {
-                    let i = lines.findIndex(other_line => {
-                        return other_line == line;
-                    });
-
+                let i = 0;
+                for (let line in lines) {
                     if (!line.includes(".add") || lines.length < i + 4) {
                         return;
                     }
@@ -262,15 +259,13 @@
                     rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
 
                     buildCube(name, material, size, location, rotation);
-                })
+                    i++;
+                }
             }
 
             function importFromYml(lines) {
-                lines.forEach(line => {
-                    let i = lines.findIndex(other_line => {
-                        return other_line == line;
-                    });
-                    
+                let i = 0;
+                for (let line in lines) {    
                     if (!line.includes("material:") || lines.length < i + 3) {
                         return;
                     }
@@ -288,7 +283,8 @@
                     rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
 
                     buildCube(name, material, size, location, rotation);
-                })
+                    i++;
+                }
             }
 
             function buildCube(name, material, size, location, rotation) {
@@ -314,7 +310,7 @@
                 let i = 0;
                 let vector = [];
                 let string = container_string.substring(container_string.lastIndexOf(start_character) + 1, container_string.lastIndexOf(end_character));
-                for (let piece in string.split(",") {
+                for (let piece in string.split(",")) {
                     if (i > 2) {
                         break;
                     }
