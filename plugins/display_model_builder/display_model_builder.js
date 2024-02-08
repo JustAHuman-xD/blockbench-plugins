@@ -324,6 +324,9 @@
                     }
 
                     vector[i] = parseFloat(piece);
+                    if (model_code_panel.vue.scale_factor) {
+                        vector[i] = vector[i] * 16
+                    }
                 })
                 
                 return vector;
