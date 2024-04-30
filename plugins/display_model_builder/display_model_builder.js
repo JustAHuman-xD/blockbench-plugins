@@ -528,8 +528,9 @@
 
                         if (sum(rotation) != 0) {
                             code = code + `
-        .rotate(${rotation[0]}, ${rotation[1]}, ${rotation[2]}))`
+        .rotate(${rotation[0]}, ${rotation[1]}, ${rotation[2]})`
                         }
+                        code = code + `)`
                     } else {
                         code = code + `
     ${id}:
