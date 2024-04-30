@@ -465,6 +465,12 @@
                 return degrees * (Math.PI / 180)
             }
 
+            function sum(set) {
+                let sum = 0;
+                set.forEach(e => sum += e);
+                return sum;
+            }
+
             function generateCode() {
                 let code = "";
                 let elements = Project.elements;
@@ -513,16 +519,24 @@
                         code = code + `
     .add(\"${id}\", new ModelCuboid()
         .material(Material.${material})
-        .size(${size[0]}F, ${size[1]}F, ${size[2]}F)
-        .location(${location[0]}F, ${location[1]}F, ${location[2]}F)
-        .rotation(${rotation[0]}, ${rotation[1]}, ${rotation[2]}))`
+        .scale(${size[0]}F, ${size[1]}F, ${size[2]}F)`
+
+                        if (sum(location) != 0) {
+                            code = code + `
+        .translate(${location[0]}F, ${location[1]}F, ${location[2]}F)` 
+                        }
+
+                        if (sum(rotation) != 0) {
+                            code = code + `
+        .rotate(${rotation[0]}, ${rotation[1]}, ${rotation[2]}))`
+                        }
                     } else {
                         code = code + `
     ${id}:
         material: ${material}
-        size: [${size[0]}, ${size[1]}, ${size[2]}]
-        location: [${location[0]}, ${location[1]}, ${location[2]}]
-        rotation: [${rotation[0]}, ${rotation[1]}, ${rotation[2]}]`
+        scale: [${size[0]}, ${size[1]}, ${size[2]}]
+        translate: [${location[0]}, ${location[1]}, ${location[2]}]
+        rotate: [${rotation[0]}, ${rotation[1]}, ${rotation[2]}]`
                     }
                 })
 
