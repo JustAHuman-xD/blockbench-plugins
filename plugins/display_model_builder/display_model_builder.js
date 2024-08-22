@@ -17,7 +17,7 @@
         })
     }
 
-    let display_model_format, import_display_model_action, import_display_model_dialog, model_code_toolbar, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle, model_code_panel, change_material_action, change_material_dialog, material_data, texture_cleanup
+    let display_model_format, import_display_model_action, import_display_model_dialog, model_code_toolbar, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle, model_code_old_toggle, model_code_panel, change_material_action, change_material_dialog, material_data, texture_cleanup
 
     Plugin.register(id, {
         title: name,
@@ -142,9 +142,20 @@
                 }
             })
 
+            model_code_old_toggle = new Toggle("model_code_old", {
+                name: "Toggle Old Code",
+                description: "Should the model code use the old method names? (location instead of translate, etc)",
+                icon: "history",
+                default: false,
+                onChange: function() {
+                    model_code_panel.vue.old_code = !model_code_panel.vue.old_code;
+                    updatePanel();
+                }
+            })
+
             model_code_toolbar = new Toolbar("model_code_toolbar", {
                 id: "model_code_toolbar",
-                children: [import_display_model_action, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle]
+                children: [import_display_model_action, copy_model_code_action, model_code_yml_toggle, model_code_scale_factor_toggle, model_code_old_toggle]
             })
 
             model_code_panel = new Panel("display_model_code_panel", {
@@ -167,7 +178,8 @@
                         text: `// There is nothing to display!
 // Try adding some cubes to get started!`,
                         yml: false,
-                        scale_factor: false
+                        scale_factor: false,
+                        old_code: false
                     },
                     template: `
                         <div>
@@ -465,6 +477,14 @@
                 return degrees * (Math.PI / 180)
             }
 
+            function cleanNumbers(numbers) {
+                const threshold = 1e-10;
+                return numbers.map(num => {
+                    let rounded = Math.round(num * 100000) / 100000;
+                    return Math.abs(rounded) < threshold ? 0 : rounded;
+                });
+            }
+
             function sum(set) {
                 let sum = 0;
                 set.forEach(e => sum += e);
@@ -504,9 +524,9 @@
                     let from = element.from;
                     let to = element.to;
                     let rotationDegrees = element.rotation;
-                    let rotation = [degreesToRadians(rotationDegrees[0]), degreesToRadians(rotationDegrees[1]), degreesToRadians(rotationDegrees[2])];
-                    let size = [Math.abs(from[0] - to[0]), Math.abs(from[1] - to[1]), Math.abs(from[2] - to[2])];
-                    let location = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2];
+                    let rotation = cleanNumbers([degreesToRadians(rotationDegrees[0]), degreesToRadians(rotationDegrees[1]), degreesToRadians(rotationDegrees[2])]);
+                    let size = cleanNumbers([Math.abs(from[0] - to[0]), Math.abs(from[1] - to[1]), Math.abs(from[2] - to[2])]);
+                    let location = cleanNumbers([(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2]);
                     let material = element.material.toUpperCase();
                     let id = nameToId(element.name);
 
@@ -518,8 +538,7 @@
                     if (!model_code_panel.vue.yml) {
                         code = code + `
     .add(\"${id}\", new ModelCuboid()
-        .material(Material.${material})
-        .scale(${size[0]}F, ${size[1]}F, ${size[2]}F)`
+        .material(Material.${material})`
 
                         if (sum(location) != 0) {
                             code = code + `
@@ -530,7 +549,8 @@
                             code = code + `
         .rotate(${rotation[0]}, ${rotation[1]}, ${rotation[2]})`
                         }
-                        code = code + `)`
+                        code = code + `
+        .scale(${size[0]}F, ${size[1]}F, ${size[2]}F))`
                     } else {
                         code = code + `
     ${id}:
@@ -540,6 +560,12 @@
         rotate: [${rotation[0]}, ${rotation[1]}, ${rotation[2]}]`
                     }
                 })
+
+                if (model_code_panel.vue.old_code) {
+                    code = code.replaceAll("scale", "size")
+                    code = code.replaceAll("translate", "location")
+                    code = code.replaceAll("rotate", "rotation")
+                }
 
                 return code
             }
