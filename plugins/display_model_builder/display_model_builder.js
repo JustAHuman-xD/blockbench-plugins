@@ -536,13 +536,30 @@
                     }
 
                     if (!model_code_panel.vue.yml) {
-                        code = code + `
+                        if (model_code_panel.vue.old_code) {
+                            code = code + `
     .add(\"${id}\", new ModelCuboid()
         .material(Material.${material})`
 
                         if (sum(location) != 0) {
                             code = code + `
-        .translate(${location[0]}F, ${location[1]}F, ${location[2]}F)` 
+        .location(${location[0]}F, ${location[1]}F, ${location[2]}F)` 
+                        }
+
+                        if (sum(rotation) != 0) {
+                            code = code + `
+        .rotation(${rotation[0]}, ${rotation[1]}, ${rotation[2]})`
+                        }
+                        code = code + `
+        .size(${size[0]}F, ${size[1]}F, ${size[2]}F))`
+                        } else {
+                            code = code + `
+    .add(\"${id}\", new ModelCuboid()
+        .material(Material.${material})`
+
+                        if (sum(location) != 0) {
+                            code = code + `
+        .translate(${location[0]}, ${location[1]}, ${location[2]})` 
                         }
 
                         if (sum(rotation) != 0) {
@@ -550,22 +567,30 @@
         .rotate(${rotation[0]}, ${rotation[1]}, ${rotation[2]})`
                         }
                         code = code + `
-        .scale(${size[0]}F, ${size[1]}F, ${size[2]}F))`
+        .scale(${size[0]}, ${size[1]}, ${size[2]}))`
+                        }
                     } else {
                         code = code + `
     ${id}:
         material: ${material}
-        scale: [${size[0]}, ${size[1]}, ${size[2]}]
-        translate: [${location[0]}, ${location[1]}, ${location[2]}]
+        scale: [${size[0]}, ${size[1]}, ${size[2]}]`
+                        if (sum(location) != 0) {
+                            code = code + `
+        translate: [${location[0]}, ${location[1]}, ${location[2]}]`
+                        }
+                        
+                        if (sum(rotation) != 0) {
+                            code = code + `
         rotate: [${rotation[0]}, ${rotation[1]}, ${rotation[2]}]`
+                        }
+
+                        if (model_code_panel.vue.old_code) {
+                            code = code.replaceAll("scale", "size")
+                            code = code.replaceAll("translate", "location")
+                            code = code.replaceAll("rotate", "rotation")
+                        }
                     }
                 })
-
-                if (model_code_panel.vue.old_code) {
-                    code = code.replaceAll("scale", "size")
-                    code = code.replaceAll("translate", "location")
-                    code = code.replaceAll("rotate", "rotation")
-                }
 
                 return code
             }
