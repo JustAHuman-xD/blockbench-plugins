@@ -224,12 +224,14 @@
             Blockbench.on("finished_edit", updatePanel);
 
             function updateCube() {
-                Cube.selected.forEach(cube => {
-                    cube.resize(-1, 0);
-                    cube.resize(-1, 1);
-                    cube.resize(-1, 2);
-                })
-                setSelectedCubesMaterial("stone");
+                if (Project.format?.id == "display_model") {
+                    Cube.selected.forEach(cube => {
+                        cube.resize(-1, 0);
+                        cube.resize(-1, 1);
+                        cube.resize(-1, 2);
+                    })
+                    setSelectedCubesMaterial("stone");
+                }
             }
 
             function updatePanel() {
