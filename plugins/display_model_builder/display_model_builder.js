@@ -251,25 +251,36 @@
                 } else {
                     importFromYml(lines);
                 }
+                updatePanel();
             }
 
             function importFromJava(lines) {
                 lines.forEach((line, i, ignored) => {
-                    if (!line.includes(".add") || lines.length < i + 4) {
+                    if (!line.includes(".add")) {
                         return;
                     }
 
-                    let material_line = lines[i + 1];
-                    let size_line = lines[i + 2];
-                    let location_line = lines[i + 3];
-                    let rotation_line = lines[i + 4];
-
                     let name = line.substring(line.indexOf("\"") + 1, line.lastIndexOf("\""));
-                    let material = material_line.substring(material_line.lastIndexOf(".") + 1, material_line.lastIndexOf(")")).toLowerCase();
-                    let size = vectorFromString(size_line, "(", ")");
-                    let location = vectorFromString(location_line, "(", ")");
-                    let rotation = vectorFromString(rotation_line, "(", ")");
-                    rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+                    let material = "stone";
+                    let size = [1, 1, 1];
+                    let location = [0, 0, 0];
+                    let rotation = [0, 0, 0];
+
+                    for (let p = 1; p <= Math.min(4, lines.length - (i + 1)); p++) {
+                        let propertyLine = lines[i + p];
+                        if (propertyLine.includes(".add")) {
+                            break;
+                        } else if (propertyLine.includes(".material")) {
+                            material = propertyLine.substring(propertyLine.lastIndexOf(".") + 1, propertyLine.lastIndexOf(")")).toLowerCase(); 
+                        } else if (propertyLine.includes(".translate") || propertyLine.includes(".location")) {
+                            location = vectorFromString(propertyLine, "(", ")");
+                        } else if (propertyLine.includes(".rotate") || propertyLine.includes(".rotation")) {
+                            rotation = vectorFromString(propertyLine, "(", ")");
+                            rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+                        } else if (propertyLine.includes(".scale") || propertyLine.includes(".size")) {
+                            size = vectorFromString(propertyLine, "(", ")");
+                        }
+                    }
 
                     buildCube(name, material, size, location, rotation);
                     i++;
@@ -278,21 +289,32 @@
 
             function importFromYml(lines) {
                 lines.forEach((line, i, ignored) => {
-                    if (!line.includes("material:") || lines.length < i + 3) {
+                    if (!line.includes("material:")) {
                         return;
                     }
 
                     let name_line = lines[i - 1];
-                    let size_line = lines[i + 1];
-                    let location_line = lines[i + 2];
-                    let rotation_line = lines[i + 3];
+                    let name = name_line.substring(0, name_line.lastIndexOf(":") + 1).trim();
+                    let material = "stone";
+                    let size = [1, 1, 1];
+                    let location = [0, 0, 0];
+                    let rotation = [0, 0, 0];
 
-                    let name = name_line.substring(0, line.lastIndexOf(":") + 1).trim();
-                    let material = line.substring(line.lastIndexOf(":") + 1).toLowerCase().trim();
-                    let size = vectorFromString(size_line, "[", "]");
-                    let location = vectorFromString(location_line, "[", "]");
-                    let rotation = vectorFromString(rotation_line, "[", "]");
-                    rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+                    for (let p = 1; p <= Math.min(4, lines.length - (i + 1)); p++) {
+                        let propertyLine = lines[i + p];
+                        if (propertyLine.includes("material")) {
+                            material = propertyLine.substring(propertyLine.lastIndexOf(":") + 1).toLowerCase().trim(); 
+                        } else if (propertyLine.includes("translate") || propertyLine.includes("location")) {
+                            location = vectorFromString(propertyLine, "[", "]");
+                        } else if (propertyLine.includes("rotate") || propertyLine.includes("rotation")) {
+                            rotation = vectorFromString(propertyLine, "[", "]");
+                            rotation = [radiansToDegrees(rotation[0]), radiansToDegrees(rotation[1]), radiansToDegrees(rotation[2])];
+                        } else if (propertyLine.includes("scale") || propertyLine.includes("size")) {
+                            size = vectorFromString(propertyLine, "[", "]");
+                        } else {
+                            break;
+                        }
+                    }
 
                     buildCube(name, material, size, location, rotation);
                     i++;
